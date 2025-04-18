@@ -1,0 +1,99 @@
+name: CI/CD Pipeline with Security Checks
+
+on:
+  push:
+    branches:
+      - master  # main branch'a push olduğunda tetiklenecek
+
+jobs:
+  security-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Syft'i yükleyip konteyner imajını tarama
+      - name: Install Syft
+        run: |
+          curl -sSL https://github.com/anchore/syft/releases/download/v0.72.0/syft-linux-amd64 -o /usr/local/bin/syft
+          chmod +x /usr/local/bin/syft
+
+      - name: Scan container image with Syft
+        run: syft your-container-image:latest  # your-container-image, taranacak imaj adı
+
+      - name: Install Semgrep
+        run: |
+          curl -s https://semgrep.dev/install | bash
+          
+      - name: Run Semgrep scan
+        run: semgrep --config auto your-repository-path/
+      - name: Install Gitleaks
+        run: |
+          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v8.12.0/gitleaks-linux-amd64.tar.gz | tar -xz
+          mv gitleaks-linux-amd64 /usr/local/bin/gitleaks
+          
+      - name: Run Gitleaks scan
+        run: gitleaks detect --source=. --config-path=gitleaks.toml
+      - name: Install ZAP
+        run: |
+          curl -sSL https://github.com/zaproxy/zaproxy/releases/download/v2.11.0/zaproxy_2.11.0_amd64.deb -o zaproxy.deb
+          sudo dpkg -i zaproxy.deb
+          
+      - name: Run ZAP security scan
+        run: |
+          zap-cli start
+          zap-cli active-scan --url http://your-app-url  # Uygulamanızın URL'si
+          zap-cli report -o zap_report.html -f html  # ZAP raporu oluşturulacak
+name: CI/CD Pipeline with Security Checks
+
+on:
+  push:
+    branches:
+      - main  # main branch'a push olduğunda tetiklenecek
+
+jobs:
+  security-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Syft: Container Image Scan
+      - name: Install Syft
+        run: |
+          curl -sSL https://github.com/anchore/syft/releases/download/v0.72.0/syft-linux-amd64 -o /usr/local/bin/syft
+          chmod +x /usr/local/bin/syft
+          
+      - name: Scan container image with Syft
+        run: syft your-container-image:latest
+
+      # Semgrep: Static Code Analysis
+      - name: Install Semgrep
+        run: |
+          curl -s https://semgrep.dev/install | bash
+          
+      - name: Run Semgrep scan
+        run: semgrep --config auto your-repository-path/
+
+      # Gitleaks: Secret Scanning
+      - name: Install Gitleaks
+        run: |
+          curl -sSL https://github.com/zricethezav/gitleaks/releases/download/v8.12.0/gitleaks-linux-amd64.tar.gz | tar -xz
+          mv gitleaks-linux-amd64 /usr/local/bin/gitleaks
+          
+      - name: Run Gitleaks scan
+        run: gitleaks detect --source=. --config-path=gitleaks.toml
+
+      # OWASP ZAP: Dynamic Application Security Testing
+      - name: Install ZAP
+        run: |
+          curl -sSL https://github.com/zaproxy/zaproxy/releases/download/v2.11.0/zaproxy_2.11.0_amd64.deb -o zaproxy.deb
+          sudo dpkg -i zaproxy.deb
+          
+      - name: Run ZAP security scan
+        run: |
+          zap-cli start
+          zap-cli active-scan --url http://your-app-url
+          zap-cli report -o zap_report.html -f html
